@@ -1,0 +1,36 @@
+<?php
+
+function time2datestr ($time) {
+  if (isset ($time)) {
+    return date ("D_d_M_Y", $time);
+  }
+  return date ("D_d_M_Y");
+}
+
+function datestr2time ($datestr) {
+  return strtotime ("23:59:59 " . str_replace ("_", " ", $datestr));
+}
+
+function base_href() {
+
+  $httphost = $_SERVER['HTTP_HOST'];
+  return "http://$httphost/";
+}
+
+$request_query = explode ("/", $_SERVER['PATH_INFO']);
+$ndx = 0;
+
+for ($ndx = 1; $ndx < count ($request_query); $ndx += 2) {
+  if ($ndx == count ($request_query)) {
+    $request_query[$ndx + 1] = "";
+  }
+
+  if (!isset ($$request_query[$ndx])) {
+    $$request_query[$ndx] = $request_query[$ndx + 1];
+  }
+}
+
+$base_href = base_href().$basedir;
+
+
+?>

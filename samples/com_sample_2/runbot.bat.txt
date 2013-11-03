@@ -1,0 +1,4 @@
+@echo off
+:startbot
+skypebot.php
+goto startbot

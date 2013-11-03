@@ -1,0 +1,249 @@
+<?php
+
+function db_connect($host, $user, $pass, $name) {
+//  mysql_pconnect($host, $user, $pass) or die(mysql_error());
+  mysql_connect($host, $user, $pass) or die(mysql_error());
+  mysql_select_db($name) or die ("unable to select database");
+}
+
+function db_query($query, $debug = 0) {
+  $result = mysql_query($query);
+  if ($debug) print "<P>query: $query<BR>error:". mysql_error() ."</P>";
+  if ($result) return $result;
+  else watchdog("error", "database: ". mysql_error() ."\nquery: ". htmlspecialchars($query));
+}
+
+function db_fetch_object($qid) {
+  if ($qid) return mysql_fetch_object($qid);
+}
+
+function db_num_rows($qid) {
+  if ($qid) return mysql_num_rows($qid);
+}
+
+function db_count($qid) {
+  if ($qid) return mysql_num_rows($qid);
+}
+
+function db_fetch_row($qid) {
+  if ($qid) return mysql_fetch_row($qid);
+}
+
+function db_fetch_array($qid) {
+  if ($qid) return mysql_fetch_array($qid, MYSQL_ASSOC);
+}
+
+function db_result($qid, $field = 0) {
+  if (db_num_rows($qid) > 0) return mysql_result($qid, $field);
+}
+
+function db_insert_id() {
+  return mysql_insert_id();
+}
+
+
+/* ***************************************************** */
+function message_na() {
+  return "n/a";
+}
+
+/* ***************************************************** */
+function error_handler($errno, $message, $filename, $line, $variables) {
+  $types = array(1 => "error", 2 => "warning", 4 => "parse error", 8 => "notice", 16 => "core error", 32 => "core warning", 64 => "compile error", 128 => "compile warning", 256 => "user error", 512 => "user warning", 1024 => "user notice");
+  $entry = $types[$errno] .": $message in $filename on line $line.";
+  if (($errno == 1 || $errno == 2 || $errno == 4) && error_reporting()) {
+    watchdog("error", $types[$errno] .": $message in $filename on line $line.");
+    print $entry;
+  }
+}
+
+/* ***************************************************** */
+function watchdog($type, $message) {
+  global $user;
+  db_query("INSERT INTO watchdog (user, type, message, location, hostname, timestamp, referrer) VALUES ('$user->id', '". check_input($type) ."', '". check_input($message) ."', '". check_input(getenv("REQUEST_URI")) ."', '". check_input(getenv("REMOTE_ADDR")) ."', '". time() ."', '".check_input(getenv("HTTP_REFERER"))."' )");
+}
+
+/* ***************************************************** */
+function check_form($text) {
+  return htmlspecialchars(stripslashes($text));
+}
+
+/* ***************************************************** */
+function check_input($text) {
+  $text = str_replace(array("’","“","”","–","‘"),array("'","\"","\"","-","'"),$text);
+  $text = str_replace(array('&#8217;','&#8220;','&#8221;','&#8230;'),array("'","\"","\"","..."),$text);
+  $text = str_replace("<table>","<br />",$text);
+  $text = str_replace("<tr>","<br />",$text);
+  $text = str_replace("<br ></br>","<br />",$text);
+  $text = str_replace("\n\n","\n",$text);
+  $text = strip_tags($text, "<a><b><br><blockquote><center><div><dd><dl><dt><em><hr><i><img><li><ol><p><pre><strong><u><ul>");
+  $text = addslashes(stripslashes(substr($text, 0, 10000))); 
+  return $text;
+}
+
+/* ***************************************************** */
+function check_output($text, $nl2br = 0) {
+  $text = ($text) ? ($nl2br ? nl2br(stripslashes($text)) : stripslashes($text)) : "";
+  $text = str_replace(array("’","“","”","–","‘"),array("'","\"","\"","-","'"),$text);
+  $text = str_replace(array('&#8217;','&#8220;','&#8221;','&#8230;'),array("'","\"","\"","..."),$text);
+  $text = str_replace("<table>","<br />",$text);
+  $text = str_replace("<tr>","<br />",$text);
+  $text = str_replace("<br ></br>","<br />",$text);
+  $text = str_replace("</p>\n<br />","</p>",$text);
+  $text = str_replace("</p>\n<br />","</p>",$text);
+  $text = strip_tags($text, "<a><b><br><blockquote><center><div><dd><dl><dt><em><hr><i><img><li><ol><p><pre><strong><u><ul>");
+  $text = eregi_replace("([ \f\r\t\n\'\"])style=[^>]+", "\\1", $text);
+//  $text = eregi_replace("([ \f\r\t\n\'\"])class=[^>]+", "\\1", $text);
+  $text = eregi_replace("([ \f\r\t\n\'\"])on[a-z]+=[^>]+", "\\1", $text);
+  $text=preg_replace('/<!--.+?-->/','',$text);
+  $text = preg_replace("%href=(.+?)>%i", "href=$1 target=\"new\">",$text);
+  return $text;  
+}
+
+/* ***************************************************** */
+function format_plural($count, $singular, $plural) {
+  return ($count == 1) ? "$count ". $singular : "$count ". $plural;
+}
+
+/* ***************************************************** */
+function format_interval($timestamp) {
+  $units = array("year|years" => 31536000, "week|weeks" => 604800, "day|days" => 86400, "hour|hours" => 3600, "min|min" => 60, "sec|sec" => 1);
+  foreach ($units as $key=>$value) {
+    $key = explode("|", $key);
+    if ($timestamp >= $value) {
+      $output .= ($output ? " " : "") . format_plural(floor($timestamp / $value), $key[0], $key[1]);
+      $timestamp %= $value;
+    }
+  }
+  return ($output) ? $output : "0 sec";
+}
+
+/* ***************************************************** */
+function form($action, $form, $method = "post", $options = 0) {
+  return "<form action=\"$action\" method=\"$method\"". ($options ? " $options" : "") .">\n$form</form>\n";
+}
+
+/* ***************************************************** */
+function form_item($title, $value, $description = 0) {
+  return ($description) ? (($title)?"<b>$title:</b><br />":"")."$value<br /><small><i>$description</i></small><p />\n" : "<b>$title:</b><br />$value<p />\n";
+}
+
+/* ***************************************************** */
+function form_textfield($title, $name, $value, $size, $maxlength, $description = 0) {
+  return form_item($title, "<input maxlength=\"$maxlength\" name=\"edit[$name]\" size=\"$size\" value=\"". check_form($value) ."\" />", $description);
+}
+
+/* ***************************************************** */
+function form_textfield2($title, $name, $value, $size, $maxlength, $description = 0) {
+  return form_item($title, "<input maxlength=\"$maxlength\" name=\"$name\" size=\"$size\" value=\"". check_form($value) ."\" />", $description);
+}
+
+/* ***************************************************** */
+function form_textfield_noedit($title, $name, $value, $size, $maxlength, $description = 0) {
+  return form_item($title, "<input maxlength=\"$maxlength\" name=\"$name\" size=\"$size\" value=\"". check_form($value) ."\" />", $description);
+}
+
+/* ***************************************************** */
+function form_select($title, $name, $value, $options, $description = 0, $extra = 0) {
+  if (count($options) > 0) {
+    foreach ($options as $key=>$choice) $select .= "<option value=\"$key\"". (is_array($value) ? (in_array($key, $value) ? " selected" : "") : ($key == $value ? " selected" : "")) .">". check_form($choice) ."</option>";
+    return form_item($title, "<select name=\"edit[$name]\"". ($extra ? " $extra" : "") .">$select</select>", $description);
+  }
+}
+
+/* ***************************************************** */
+function form_select2($title, $name, $value, $options, $description = 0, $extra = 0) {
+  if (count($options) > 0) {
+    foreach ($options as $key=>$choice) $select .= "<option value=\"$key\"". (is_array($value) ? (in_array($key, $value) ? " selected" : "") : ($key == $value ? " selected" : "")) .">". check_form($choice) ."</option>";
+    return form_item($title, "<select name=\"$name\"". ($extra ? " $extra" : "") .">$select</select>", $description);
+  }
+}
+
+/* ***************************************************** */
+function form_hidden($name, $value) {
+  return "<input type=\"hidden\" name=\"edit[$name]\" value=\"". check_form($value) ."\" />\n";
+}
+
+/* ***************************************************** */
+function form_submit($value) {
+  return "<input type=\"submit\" name=\"op\" value=\"". check_form($value) ."\" />\n";
+}
+
+/* ***************************************************** */
+function getmicrotime(){ 
+    list($usec, $sec) = explode(" ",microtime()); 
+    return ((float)$usec + (float)$sec); 
+    } 
+
+/* ***************************************************** */
+function timer_start() {
+  global $timer_start;
+  $timer_start = getmicrotime();
+}
+
+/* ***************************************************** */
+function timer_print() {
+  global $timer_start;
+  $stop = getmicrotime();
+//  $diff = $stop[0] - $timer[0];
+  $diff = $stop-$timer_start;
+  print "<br />PHP execution time: ".round($diff,3)." s";
+}
+
+/* ***************************************************** */
+function rn2n($data) {
+  $data = str_replace("\r\n", "\n", $data);
+  $data = str_replace("\r", "\n", $data);
+  return $data;
+}
+/* ***************************************************** */
+function send_mymail($to, $subject, $message, $extra="", $from="") {
+  global $theme, $debug;
+
+  $debug=0;
+
+  $to = "$to";
+
+  $message = strip_tags($message);
+  $message = stripslashes($message);
+  $message = rn2n($message);
+
+  $subject = strip_tags($subject);
+  $subject = stripslashes($subject);
+
+  $sendmail_path = ini_get("sendmail_path");
+  if ($from) {
+    ini_set("sendmail_path", "$sendmail_path -f $from");
+    $headers .= "From: $from\r\n";
+    $headers .= "Reply-To: $from\r\n";
+    $headers .= "X-Sender: $from\r\n";
+    $headers .= "Return-Path: $from";
+    if ($extra) {
+      $extra = $headers."\r\n".$extra;
+    } else {
+      $extra = $headers;      
+    }
+  }
+
+  if ($debug) {
+    $output = "To: $to\n$extra\nSubject: $subject\n\n".check_output($message);
+    $output = "<pre>".htmlentities($output)."<pre>";
+    $theme->box($subject, $output);    
+  } else {
+    mail($to, $subject, $message, $extra);
+  }  
+
+  ini_set("sendmail_path", "$sendmail_path");
+}
+
+
+//**************************
+//Globals
+
+include_once "conf.inc.php";
+include_once "namespace.inc.php";
+
+// set error handler:
+//set_error_handler("error_handler");
+
+?>

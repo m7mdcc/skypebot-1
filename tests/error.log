@@ -1,0 +1,10 @@
+exception 'com_exception' with message 'Source: Skype4COM.Skype.1
+Description: Wait timeout.' in C:\WebServers\public\skypebot\drivers\ComDriver.php:93
+Stack trace:
+#0 C:\WebServers\public\skypebot\drivers\ComDriver.php(93): com->SendCommand(Object(variant))
+#1 C:\WebServers\public\skypebot\drivers\ComDriver.php(63): SkypeWrapper\drivers\ComDriver->invoke('NAME SkypeBot', -1)
+#2 C:\WebServers\public\skypebot\SkypeWrapper.php(67): SkypeWrapper\drivers\ComDriver->connect()
+#3 C:\WebServers\public\skypebot\Bot.php(39): SkypeWrapper\SkypeWrapper->connect()
+#4 C:\WebServers\public\skypebot\Bot.php(26): SkypeWrapper\Bot->_startup()
+#5 C:\WebServers\public\skypebot\tests\bot.php(37): SkypeWrapper\Bot->run()
+#6 {main}
