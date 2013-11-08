@@ -1,4 +1,4 @@
-skypebox
+thinkbox
 ========
 
-SkypeBox technology
+ThinkBox technology
